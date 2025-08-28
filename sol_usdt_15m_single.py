@@ -3,7 +3,7 @@ import requests
 import time
 
 # Вставьте сюда токен от BotFather
-TOKEN = "ВАШ_ТОКЕН"
+TOKEN = 8415401903:AAHV3PRhUFSxS4-1N0nbHi4WPaeCLJ609eU
 
 bot = telebot.TeleBot(TOKEN)
 
