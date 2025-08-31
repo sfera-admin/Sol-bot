@@ -1,34 +1,37 @@
-import telebot
-import requests
-import time
+import os, time, requests, telebot
 
-# Вставьте сюда токен от BotFather
-TOKEN = 8415401903:AAHV3PRhUFSxS4-1N0nbHi4WPaeCLJ609eU
+TOKEN = os.getenv("BOT_TOKEN")
+if not TOKEN:
+    raise RuntimeError("BOT_TOKEN env var is missing")
 
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 
 PAIR = "SOLUSDT"
 INTERVAL = "15m"
 BINANCE_URL = "https://api.binance.com/api/v3/klines"
 
-def get_price():
-    try:
-        params = {"symbol": PAIR, "interval": INTERVAL, "limit": 1}
-        response = requests.get(BINANCE_URL, params=params)
-        data = response.json()
-        close_price = float(data[0][4])  # последняя цена закрытия
-        return close_price
-    except Exception as e:
-        return f"Ошибка получения цены: {e}"
+def latest_close():
+    r = requests.get(BINANCE_URL, params={"symbol": PAIR, "interval": INTERVAL, "limit": 1}, timeout=10)
+    r.raise_for_status()
+    return float(r.json()[0][4])
 
 @bot.message_handler(commands=['start'])
-def start_message(message):
-    bot.send_message(message.chat.id, "✅ Бот запущен!\nЯ буду показывать цену SOL/USDT (таймфрейм 15м).")
+def start(m):
+    bot.reply_to(m, "✅ Бот запущен. Команды:\n/price — текущая цена SOL/USDT (15m)")
 
 @bot.message_handler(commands=['price'])
-def price_message(message):
-    price = get_price()
-    bot.send_message(message.chat.id, f"💰 Цена SOL/USDT: {price}")
+def price(m):
+    try:
+        p = latest_close()
+        bot.reply_to(m, f"💰 SOL/USDT: <b>{p}</b> (15m)")
+    except Exception as e:
+        bot.reply_to(m, f"⚠️ Ошибка цены: {e}")
 
-print("Бот запущен...")
-bot.polling()
+if __name__ == "__main__":
+    print("Bot polling...")
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=0, timeout=20)
+        except Exception as e:
+            print("Polling error:", e)
+            time.sleep(5)
